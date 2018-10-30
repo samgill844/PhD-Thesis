@@ -1,0 +1,325 @@
+/*∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗
+∗ ∗
+∗ This program is free software; you can redistribute it and/or modify ∗
+∗ it under the terms of the GNU General Public License as published by ∗
+∗ the Free Software Foundation; either version 2 of the License, or ∗
+∗ (at your option) any later version. ∗
+∗ ∗
+* *                   Email : s.gill@keele.ac.uk                        * *
+* *                   github : samgill844                               * *
+∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗∗*/
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include<pthread.h>
+#define pi 3.14159265359
+
+/*
+###############################################################################
+#                     KEPLERIAN EQUATIONS                                     #
+###############################################################################
+*/
+
+__device__ float d_t_ecl_to_peri(float t_ecl, float ecc, float omega, float incl, float p_sid)
+{
+	//////////////////////////////////////////////////////////////////////////////////
+	// Calculate the time of periastron passage immediately prior to a give time of //
+	// eclipse. Equation numbers from Hilditch, "An Introduction to Close Binary    //
+	// Stars"																		//
+	//////////////////////////////////////////////////////////////////////////////////
+	
+	// Define variables used
+	float  theta, theta_0, delta_t,   ee, eta;
+	float tol = 1e-5;
+
+	float efac  = 1.0 - pow(ecc, 2);
+	float sin2i = pow(sinf(incl), 2);
+
+	// Value of theta for i=90 degrees
+	theta_0 = (pi/2) - omega; // True anomaly at superior conjunction
+
+	if (incl != pi/2)
+	{
+ 		//par = (/ efac, sin2i, omega, ecc );
+ 		//d =  brent(theta_0-pi/2,theta_0,theta_0+pi/2, delta_func, npar, par, tol, theta, verbose1);
+		memcpy(&theta, &theta_0, sizeof(float));
+		
+		// Parameters associated with minimization
+		float sep = 100.0;
+		float sep_trial;
+		float step=0.1;
+		int nit=0;
+		float diff=100.0;
+		while (diff > tol)
+		{
+			theta_0 = theta_0 + step;
+			
+			sep_trial = (1-powf(ecc,2)) * sqrt( 1 - powf(sinf(incl), 2) * powf(sinf(theta_0 + omega), 2)) / (1 + ecc*sin(theta_0));
+			diff = abs(sep - sep_trial);
+			if (sep_trial < sep)
+			{
+				// going in the right direction
+				memcpy(&sep, &sep_trial, sizeof(float));
+				memcpy(&theta, &theta_0, sizeof(float));
+
+			}
+			else
+			{
+				// going in the wrong direction, reverse
+				memcpy(&sep, &sep_trial, sizeof(float));
+				memcpy(&theta, &theta_0, sizeof(float));
+				step = -step/2;
+
+			}
+
+			nit ++;
+		
+		}
+	}
+	else
+	{
+		memcpy(&theta, &theta_0, sizeof(float));
+	}
+
+
+	if (theta == pi)
+	{
+ 		ee = pi;
+	}
+	else
+	{
+ 		ee = 2.0 * atanf(sqrt((1.0-ecc)/(1.0+ecc)) * tanf(theta/2.0));
+	}
+	
+	eta = ee - ecc*sinf(ee);
+	delta_t = eta*p_sid/(pi*2);
+
+	return  t_ecl  - delta_t;
+}
+
+
+
+
+__device__ float d_eanom(float m, float e)
+{
+    /*
+    !  Calculate the eccentric anomaly of a Keplerian orbit with
+    ! eccentricity e, from the mean anomaly, m.
+    !
+    !  Solves Kepler''s equation using Newton-Raphson iteration using formula for
+    ! initial estimate from Heintz DW, 'Double stars' (Reidel, 1978).
+    ! 
+    !  Input:
+    !   m - Mean anomaly in radians.
+    !   e - Eccentrcity, 0 <= E < 1.
+    ! 
+    !  Output:
+    !    Eccentric anomaly in the range 0 < eanom < 2*pi.
+    !    If e is out-of-range return bad_dble
+    !
+    */
+    float etol=1.0e-5;
+
+
+    int it = 0;
+    float e1 = fmod((float) m,(float) (2*pi)) + e*sin(m) + e*e*sin(2.0*m)/2.0;
+    float e0;
+    float test = 1.0;
+    while (test > etol)
+    {
+        it ++;
+        e0 = e1;
+        e1 = e0 + (m-(e0 - e*sin(e0)))/(1.0 - e*cos(e0));
+        test = abs(e1 - e0);
+
+    }
+
+    if (e1 < 0)
+    {
+        e1 = e1 + 2*pi;
+    }
+    return e1;
+}
+
+
+
+__device__ float d_trueanom(float m, float e)
+{
+    /*
+    !  Calculate the true anomaly of a Keplerian orbit with eccentricity e,
+    ! from the mean anomaly, m.
+    !
+    ! Uses: eanom
+    !
+    !  Input:
+    !   m - Mean anomaly in radians.
+    !   e - Eccentrcity, 0 <= e < 1.
+    !
+    ! Output:
+    !   True anomaly in the range 0 to 2*PI.
+    !   If e is out-of-range return bad_dble
+    !  
+    */
+
+    float ee = d_eanom(m,e);
+    return 2.0*atan(sqrt((1.0 + e)/(1.0 - e))*tan(ee/2.0));
+}
+
+
+
+
+
+/********************************************************
+			lightcurve functions
+********************************************************/
+__global__ void lc(long int n_obs, float * t, float t0, float period, float radius_1, float k, float e, float w, float incl, float * LC_gpu)
+{
+	const int i = blockIdx.x*blockDim.x + threadIdx.x;
+	if (i < n_obs)
+	{
+		// Calculate the mean anomaly
+		 float mean_anomaly = 2*pi*fmod((t[i] - d_t_ecl_to_peri(t0, e, w,  incl, period))/period,1.0);
+
+	}
+	printf("\nHello from worker %d", i);
+}
+
+
+/********************************************************
+			Radial velocity functions
+********************************************************/
+
+
+
+__global__ void rv(int n_obs,  float * t, float * RV1, float * RV2,  float t0, float period,  float e, float w, float incl, float K1, float K2, float V0, float dV0)
+{
+	const int i = blockIdx.x*blockDim.x + threadIdx.x;
+	if (i < n_obs)
+	{
+		// Calculate the mean anomaly
+		 float mean_anomaly = 2*pi*fmod((t[i] - d_t_ecl_to_peri(t0, e, w,  incl, period))/period,1.0);
+
+		// Calculate the RV for circular orbits
+		if (e == 0.0)
+	    {
+	        RV1[i] =  K1*cos(mean_anomaly+w)      + V0    + dV0*(t[i]-t0);
+	        RV2[i] =  K2*cos(mean_anomaly+w + pi) + V0    + dV0*(t[i]-t0);
+	    }
+	    else
+	    {
+	        RV1[i] =  K1*( e*cos(w) + cos(d_trueanom(mean_anomaly,e) + w))    + V0    + dV0*(t[i]-t0);
+	        RV2[i] =  K2*( e*cos(w) + cos(d_trueanom(mean_anomaly,e)+pi + w)) + V0    + dV0*(t[i]-t0);
+	    }
+
+	}
+
+}
+
+__global__ void rv_loglike(int n_obs,  float * t, float * RV1_DATA, float * RV2_DATA,  float * RV1_DATA_ERR, float * RV2_DATA_ERR, float t0, float period,  float e, float w, float incl, float K1, float K2, float V0, float dV0, float Jitter, float * LOGLIKE_RV1, float * LOGLIKE_RV2)
+{
+	const int i = blockIdx.x*blockDim.x + threadIdx.x;
+	if (i < n_obs)
+	{
+		// Calculate the mean anomaly
+		 float mean_anomaly = 2*pi*fmod((t[i] - d_t_ecl_to_peri(t0, e, w,  incl, period))/period,1.0);
+
+		// Calculate the RV for circular orbits
+		float model1, model2, wt1, wt2;
+		if (e == 0.0)
+	    {
+	        model1 =  K1*cos(mean_anomaly+w)       + V0    + dV0*(t[i]-t0);
+	     	model2 =  K2*cos(mean_anomaly+w + pi)  + V0    + dV0*(t[i]-t0);
+	    }
+	    else
+	    {
+	        model1 =  K1*( e*cos(w) + cos(d_trueanom(mean_anomaly,e) + w))    + V0    + dV0*(t[i]-t0);
+	        model2 =  K2*( e*cos(w) + cos(d_trueanom(mean_anomaly,e)+pi + w)) + V0    + dV0*(t[i]-t0);
+	    }
+
+	    wt1 = 1.0 / (RV1_DATA_ERR[i]*RV1_DATA_ERR[i] + Jitter*Jitter);
+	    wt2 = 1.0 / (RV2_DATA_ERR[i]*RV2_DATA_ERR[i] + Jitter*Jitter);
+
+	    LOGLIKE_RV1[i] = -0.5*((RV1_DATA[i] - model1)*(RV1_DATA[i] - model1)*wt1 - log(wt1) );
+	    LOGLIKE_RV2[i] = -0.5*((RV2_DATA[i] - model2)*(RV2_DATA[i] - model2)*wt2 - log(wt2) );
+
+	}
+}
+
+__global__ void rv_loglike_nmodels(long int n_models, float * models, int n_obs, float * t, float * RV1_DATA, float * RV2_DATA,  float * RV1_DATA_ERR, float * RV2_DATA_ERR, float * LOGLIKE_RV1, float * LOGLIKE_RV2)
+{
+	const long int i = blockIdx.x*blockDim.x + threadIdx.x;
+
+	if (i < n_models)
+	{
+		float log_like_total1 = 0.0;
+		float log_like_total2 = 0.0;
+
+		// Extract and unpack parameters
+		// t0, period,  f_s, f_c, incl, K1, K2, V0, dV0, Jitter  (10 paramets)
+		float t0, period,  e, w, f_c, f_s, incl, K1, K2, V0, dV0, Jitter;
+		t0       = models[10*i];
+		period   = models[10*i + 1];
+		f_s      = models[10*i + 2];
+		f_c      = models[10*i + 3];
+		e = f_s*f_s + f_c*f_c;
+		float tmp = 0;
+		if (f_c != 0.0)
+		{
+			tmp = f_s/f_c ;
+			if (tmp > 1.0)
+				tmp = 1.0;
+			else if (tmp < -1.0)
+				tmp = -1.0;
+			w = atanf(tmp);
+		}
+
+		else
+			w = 0.0;
+
+		//printf("\n W : %f", w);
+
+		incl     = models[10*i + 4];
+		K1       = models[10*i + 5];
+		K2       = models[10*i + 6];
+		V0       = models[10*i + 7];
+		dV0      = models[10*i + 8];
+		Jitter   = models[10*i + 9];
+
+		for (int j = 0; j < n_obs; j++)
+		{
+			// Calculate the mean anomaly
+			 float mean_anomaly = 2*pi*fmod((t[j] - d_t_ecl_to_peri(t0, e, w,  incl, period))/period,1.0);
+
+			// Calculate the true anomaly
+			// float true_anomaly = d_trueanom(mean_anomaly, e);
+
+			// Calculate the RV for circular orbits
+			float model1, model2, wt1, wt2;
+			if (e == 0.0)
+		    {
+		        model1 =  K1*cos(mean_anomaly+w)       + V0    + dV0*(t[j]-t0);
+		     	model2 =  K2*cos(mean_anomaly+w + pi)  + V0    + dV0*(t[j]-t0);
+		    }
+		    else
+		    {
+		        model1 =  K1*( e*cos(w) + cos(d_trueanom(mean_anomaly,e) + w))    + V0    + dV0*(t[j]-t0);
+		        model2 =  K2*( e*cos(w) + cos(d_trueanom(mean_anomaly,e)+pi + w)) + V0    + dV0*(t[j]-t0);
+		    }
+
+		    wt1 = 1.0 / (RV1_DATA_ERR[j]*RV1_DATA_ERR[j] + Jitter*Jitter);
+		    wt2 = 1.0 / (RV2_DATA_ERR[j]*RV2_DATA_ERR[j] + Jitter*Jitter);
+
+		    log_like_total1 = log_like_total1 +  -0.5*((RV1_DATA[j] - model1)*(RV1_DATA[j] - model1)*wt1 - log(wt1) );
+		    log_like_total2 = log_like_total2 +  -0.5*((RV2_DATA[j] - model2)*(RV2_DATA[j] - model2)*wt2 - log(wt2) );
+
+	    }
+
+	    LOGLIKE_RV1[i] = log_like_total1;
+	    LOGLIKE_RV2[i] = log_like_total2;	    
+	}
+}

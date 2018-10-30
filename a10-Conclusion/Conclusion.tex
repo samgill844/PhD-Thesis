@@ -1,0 +1,101 @@
+\chapter{Conclusion}
+
+\begin{quote}
+``{\it Astronomy compels the soul to look upwards and leads us from this world to another.}''
+
+-- Plato
+\end{quote}
+
+This work has resulted in the absolute parameters 9 M-dwarfs in eclipsing binary systems. During the course of this work I developed an automated spectral analysis routine to measure the atmospheric parameters of FGK stars. This method was successful and used to determine the absolute parameters of 9 M-dwarfs in eclipsing binary systems.  At the begging of this work I asked two questions which set the themes of this work. In the following sections I answer these questions with respect to the work accomplished here.  \\
+
+\noindent  \textbf{How well can we measure the atmospheric parameters of FGK stars using wavelet decomposition?}  I was able to determine the stellar atmospheric parameters ($T_{\rm eff}$, [Fe/H], $\log g$ and $V \sin i$) of FGK stars observed with the CORALIE \'{e}chelle spectrograph using wavelet decomposition. I was able to determine $T_{\rm eff}$ to a precision of 86\,K, [Fe/H] to a precision of 0.06\,dex and $V \sin i$ to a precision of 1.35\,km\,s$^{-1}$ for stars with $V \sin i  < 5$\,km\,s$^{-1}$. Measurements of $\log g$ are only reliable enough to confirm dwarf-like surface gravity ($\log g \approx 4.5$). There was a significant offset in [Fe/H] of $\approx - 0.18$\,dex relative to the equivalent width fitting method of HARPS spectra. I corrected all measurements of [Fe/H] using Eqn. \ref{composition_correction} to determine the primary star composition of 8 EBLMs in this work. I found that my method is self consistent and robust for spectra with SNR$>40$.
+
+% Paragraph 1
+% - What we did
+% - What we accomplished
+% - 
+
+
+% Paragraph 2
+%   - Weighting system
+%   - Used MCMC method
+%   - More sophisticated weighting system is required
+%   - This will focus around key spectral features i.e. iron lines, H-alpha, Mg Na 
+%   - Question is it worth it?
+%   - Might help systematice but will be complicated to develop.
+%   - takes time and may not even be neseccery as it can already perform well 
+
+Wavelet coefficients were weighted using a Mote Carlo approach which marginalised over parts of the spectrum which are noisy and of poor quality. A more sophisticated weighting system might help the systematic offset in [Fe/H] relative to the equivalent width fitting method and the systematic trend in between $\log g$ and $T_{\rm eff}$. This would focus on key spectral features such as iron lines for [Fe/H] and $V \sin i$ and the Mg triplet/ Na doublet for $\log g$.  It would also have to be ``triangular-shaped'' in a power-h\"{o}vmoller diagram to match the power of spectral lines in wavelet space (Fig. \ref{fig:wavelet:wavelet_power}). It is unclear if this would be a worthwhile pursuit.; such a weighting system would be complicated to develop and may not significantly improve the accuracy/reliability of the method. 
+
+% Paragraph 3
+%   - Could apply to large spectral suveys 
+%   - although may be problems
+%   - Was fin-tundd for CORALIE
+%   -  Did not work well with harps due to dicontinuty
+%   - produced inconsisted results from SALT for J2309-32 and J2308-46 compared to CORALIE and SED fitting - not sure why
+%   - not suitable for short surveys short spectral regions e.g. Gaia
+
+The wavelet method could be applied to other large spectroscopic surveys such as 4most \citep{2012SPIE.8446E..0TD}, HARPS or SALT HRS. However, there may be problems as the wavelet method was fine-tuned to work with the systematics and noise profiles of the CORALIE spectragraph. For example, I applied my method to the HARPs spectra of the D15 sample with a moderate level of success - the atmospheric parameters were very sensitive to how I treated to data discontinuity around 500\,nm. I also applied my method to the red and blue arms of the SALT spectra for J2349$-$32 and J02308$-$46. Measurements of $T_{\rm eff}$ and [Fe/H] were spurious and generally not consistent with D15, CORALIE spectra or SED fitting. This is probably due to the restricted usable wavelength range in each arm, different systematics and smaller noise profile (SNR > 100). The wavelet method could be ``tuned'' to work with SALT spectra but there is a question of whether it is a worthwhile pursuit as synthetic/equivalent width fitting will be far more reliable given the quality of the spectra. \\
+
+
+
+
+
+
+
+\noindent \textbf{To what extent can EBLM systems contribute to empirical mass-radius relationships at the bottom of the main sequence? } EBLMs can be used to measure the absolute parameters of M-dwarfs to a precision of a few percent. I have measured the absolute parameters of 5 EBLMs with data from ground-based instruments and 4 EBLMs observed with K2. I found that the precision of absolute parameters between each set of EBLMs is similar, meaning that multiple transits at a lower cadence achieves a similar end-product as a single transit at high cadence. Scheduling ground-based observations of EBLMs is no easy feat. The primary transit width of an EBLM ($\approx$2-6\,hours) is a significant fraction of an observable night and therefore the chance of of observing a full EBLM transit is small; I observed only 2 full transits (J2349$-$32 and J2308$-$46) across 4 weeks of 1-m telescope time. 
+
+
+% paragraph 1
+%   - Measure mass and raius to 1 percent
+%   - Measured 9 systems in this sample
+%   - 5 from ground based, four from K2
+%   - Similar precisoon achived by both sets
+%   - Scheduling ground-based obs is difficult
+
+% Paragraph 2
+%   - A good place to star the EBLM 4 sample as RV measurements are difficult to obtain
+%   - This work highlights the need for a volume-limited sample
+%   - stars reside in the PMbh -> they have two solutions for mass and radius
+%       - Could turn these into SB2s with infrrared spectrographs to provide additional constraints on mass
+%   - Could look at Gaia magnitude diagram as these systems are systematically higher (Fig. X) or pre-select coolr hosts
+%   - problem is selecting smaller stars as there is a higher probability of $b$ making R un
+
+The sample of EBLMs with absolute parameters is currently too small for an empirical relation of low-mass stars to be derived. A good place to start will be the sample of 118 EBLMs presented by \citet{Triaud2017}. There are three benefits to this sample: (1) they already have spectroscopic orbits which can difficult to obtain, (2) some already have SALT spectra which will allow us to determine if inflation is tied with individual elemental abundances and (3) the atmospheric parameters can be measured in a homogeneous way using wavelet decomposition. This work highlights that some systems are more useful to empirical calibrations than others due to the precision of which absolute parameters can be measured.  An example is the primary stars of 4 EBLMs measured in this work which have evolved into the ``blue-hook'' part of their main-sequence evolution. These systems cannot contribute to empirical calibrations and is a disappointing result as significant amount of time had been invested to measure each system. In Sec. \ref{discuss:selection} I discussed how EBLMs could be ``prioritised'' based on primary star photometric colours and effective temperatures. The down-side to selecting smaller primary stars is the higher probability of transits with high impact parameters. Systems like J1436$-$13 and J0055$-$00 have a sufficiently high impact parameters that result in a poorly constrained radii. These too cannot contribute to empirical calibrations, but we cannot identify these systems a-priori like those with primary stars that have evolved into the `blue hook'' region.
+
+% Paragraph 3
+%   - The Way EBLMs are measured signigfcantly efects absolute parameters --> akin to spectrocopy
+%   - It is worth doing a solid  comparison of different techqniques to measure EBLMs 
+%   - See what the systematic scatter is 
+
+An important conclusion from this work is that the way EBLM systems are measured significantly effects absolute stellar parameters. Before EBLMs are used to create empirical calibrations for M-dwarfs, a detailed study needs to be conducted to measure the scatter in absolute parameters of EBLMs from a homogeneous data-set. Such a test would feature a carefully selected sample of EBLMs which are suitable for empirical calibrations (e.g. J2349$-$32 and J162$-$19) and assess the inter-method scatter of absolute parameters for EBLMs.
+
+%Paragraph 4
+%   - We expect a significant yied from EBLM 4 sample
+%   - Need more lightcurves
+%   - Tess will help with this
+%       - Cover most of the sky
+%       - Ground based will still be competative for V < 12
+%   - if not EBLMs are on CHEOPS GTO programme
+%       - Known exoplanet host stars with a V-magnitude ≤ 12 anywhere in the sky
+%   - In future PLATO will be able to 
+%       - determination of accurate stellar masses, radii, and ages from asteroseismology
+%       - he mission will characterise hundreds of rocky (including Earth twins), icy or giant planets by providing exquisite measurements of their radii (3 per cent precision), masses (better than 10 per cent precision) and ages (10 per cent precision). This will revolutionise our understanding of planet formation and the evolution of planetary systems.
+%   Emerging trend where M-dwarfs in EBLMs are hotter than expected (J0055-00, J1107... EPIC ccc)
+%   We could do with focusing on infrared instruments to obtaine more secondary eclipses.
+%   
+
+I expect the EBLM sample presented by \citet{Triaud2017} will produce substantial amount of calibratable points for an empirical relations of low-mass stars. There is a need, however, for follow-up transit photometery from which to radius can be measured a precision of a few percent. TESS will produce light-curves for most of the sky but ground-based instruments will be more competitive for the fainter EBLMs. TESS is also significantly redder than K2 and so we can expect more measurements of secondary eclipses, and thus M-dwarf temperatures. The CHEOPs mission (CHaracterising ExOPlanets Satellite; \citealt{2013EPJWC..4703005B}) will observe EBLMs on the guarantied time observing programme and provide exceptionally high-quality lightcurves. In the more distant future, the PLAnetary Transits and Oscillations of stars (PLATO) mission will provide lightcurves capable of determining the mass and age of stars to better than 10\%. The asteroseismological constraint on mass and age is an alternative way to break the mass degeneracy and it would be of interest to compare these results from those of \textsc{eblmmass}.
+
+There is an emerging trend that M-dwarfs in EBLM systems are significantly hotter than predicted by evolutionary models. Because so few have EBLMs have secondary eclipses, it is unclear if what is causing the surface of the M-dwarf to appear hotter than expected. Answering this question requires more measurements of secondary eclipse depths which are most observable in the infrared. The eventual release of the James Webb Space Telescope (JWST; \citealt{2017A&A...600A..10M}) will provide a healthy sample of light-curves with NIRCam, however recent delays in the mission mean that this data may not come for some time. Meanwhile, infrared instruments on the ground such as the Infrared Survey Facility (IRSF; \citealt{2003SPIE.4841..459N}) could provide a suitable alternative in the meantime.
+
+% Paragraph 5
+The method to study EBLM systems is now well established and we can expect the field to grow substantially in coming years. The effects of EBLMs will be of particular interest to those who study exoplanets around M-dwarfs. JWST will find these systems in abundance and an empirical mass-radius-luminosity calibration from EBLMs provide additional constraints on host-star parameters. Fundamental properties of M-dwarfs are also a valuable test for evolutionary models where discrepancies are routinely observed. Generally, the EBLMs in this work agree with MESA stellar models. As the sample size grows in the near future we might find a systematic inflation/deflation of M-dwarfs which will have profound effects on exoplanets found around them. 
+
+
+
+
+
+
+
+    

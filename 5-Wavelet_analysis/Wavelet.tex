@@ -1,0 +1,460 @@
+\chapter{Atmospheric parameters of FGK stars using wavelet analysis}\label{chapter:wavelet}
+
+As part of the WASP exoplanet follow-up procedure, 10+ spectra were obtained for candidate exoplanets to estimate the semi-amplitude ($K$) and mass ratio ($q$). In subsequent years, more spectra of EBLMs were obtained from the CORALIE \'{e}chelle spectrograph \citep{2001Msngr.105....1Q} as part of the EBLM project. This lead to the publication of spectroscopic orbits for over 100 EBLM systems \citep{Triaud2017}. \citet{Triaud2017} use photometric colours to determine the effective temperature of the host star. The individual analysis of each spectrum is acceptable for a small sample size, but we require a reliable automated procedure to measure $T_{\rm eff}$, [Fe/H] and V$\sin i$ for the entirety of the EBLM database to keep pace with future EBLM discoveries.
+
+Accurate measurements of temperature and composition are needed to estimate limb-darkening coefficients and the mass of the primary the star. For EBLM systems discovered by WASP, these parameters are usually made with CORALIE spectra using measurements of equivalent widths and by fitting individual spectral lines (\citealt{2009A&A...496..259G}; \citealt{Doyle2013}; \citealt{Doyle2015}). At the same time, such a method needs to allow for noise and systematic errors present in the CORALIE spectra. The sample of EBLM spectra presented in \citet{2014A&A...572A..50G} typically have a signal-to-noise ratio per $\AA$ngstrom (SNR) between 3 and 7. The on-going radial velocity campaign to study EBLMs typically yields between 10 and 40 spectra per star. Co-adding spectra can increase the SNR ($\propto \sqrt{N_{\rm obs}}$) to over 40 in some parts of the spectrum, but the regions of the spectrum near the ends of each \'{e}chelle order suffer from both large photon noise and systematic errors due to inaccurate order-merging.  
+
+Wavelet decomposition has been used previously as part of methods developed for spectral analysis. \citet{2010PASP..122..608M} used multi-level wavelet decomposition in connectionist systems (artificial neural networks) to derive fundamental stellar parameters in the low SNR domain (5-25) in preparation for spectra from the Gaia radial velocity spectrograph (RVS). This work was extended by \citet{2016A&A...594A..68D} by using a generative artificial neural network resulting in predicted uncertainties of 220\,K, 0.32\,dex and 0.20\,dex for T$_{\rm eff}$, $\log g$ and [Fe/H], respectively for stars with a Gaia magnitude $G_{RVS}$ = 13. Using neural networks to estimate atmospheric properties has well-known problems such as long training times and a strong dependence on the initial training set. \citet{2015ApJS..218....3L} use wavelet decomposition in a regression framework to detect representative spectral features from a set of 30,000 SDSS spectra to estimate atmospheric parameters with better precision than those from neural network (83\,K, 0.23\,dex
+and 0.16\,dex for T$_{\rm eff}$, $\log g$ and [Fe/H]).
+
+The method in this work determines the best-fitting atmospheric parameters ($T_{\rm eff}$, $\log g$, [Fe/H] and V$\sin i$) for EBLM host stars by comparing a selected subset of coefficients from a wavelet decomposition to those from a grid of stellar models. This reduces systematic errors in the estimated parameters due to poor continuum normalisation and low-quality regions of the spectrum. These measurements can then be combined with photometric follow-up observations to obtain the mass and radius of M-dwarfs in EBLMs to an accuracy of a few percent. These, in turn, provide calibratable points for empirical mass-radius relations of low-mass stars (e.g. \citealt{2009A&A...505..205D}; \citealt{2010A&ARv..18...67T}). We introduce wavelet decomposition as it applies to a spectrum in Sect. \ref{wavelet:wavelet_decomposition} before reviewing my Bayesian approach to determine $T_{\rm eff}$, [Fe/H], $\log g$ and $V \sin i$ in Sect. \ref{wavelet:Method}. We show that my method converges and is self-consistent in Sect. \ref{wavelet:self_con} and test against a sample of independently analysed FGK stars in Sect. \ref{wavelet:wavelet_benchmark}. This work is published in Astronomy \& Astrophysics \citep{2018A&A...612A.111G}.  
+
+
+\section{Wavelet decomposition theory}\label{wavelet:wavelet_decomposition}
+
+\begin{figure*}[ht!]
+\centering
+\includegraphics[width=0.95\textwidth]{5-images/wavelet_power.eps}
+\caption{The power H\"{o}vmoller of wavelet coefficients (lower panel) for a region around the Mg triplet for WASP-19 (upper panel). There is significant power ($|WT_{i,k}|$ from Eq. \ref{DWT}) for scales $\sim$1\,nm in the region of the Mg lines corresponding the wavelets likeness to spectral features. Horizontal red lines represent the scales $0.012-3.125$\,nm.}
+\label{fig:wavelet:wavelet_power}
+\end{figure*}
+
+
+\begin{figure*}
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+                \includegraphics[width=0.9\textwidth]{5-images/waveletfilter_bad.eps}
+                \caption{}\label{filt:a}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+                \includegraphics[width=0.9\textwidth]{5-images/waveletfilter.eps}
+                \caption{}\label{filt:b}
+\end{subfigure}
+\caption{The reconstruction of spectra using Eq. (\ref{IDWT}) for subsets of wavelet coefficients. (Left panel - top) Raw spectra for WASP-19 (black) and the flux reconstruction using wavelet coefficients from bands $i=4$-$12$ using the raw spectrum (blue; offset $-0.6$) and the best fitting model for WASP-19 (red; offset $-1.2$). (Left panel - bottom) The reconstruction of the best-fitting model for WASP-19 (red) and the raw spectrum (blue; offset $+0.5$) using coefficients $i=13$-$17$. (Right panel) As in the left panel except with reconstructions using coefficients $i=4$-$14$ (top) and coefficients $i=15$-$17$ (bottom).}\label{fig:wavelet:filt}
+\end{figure*}
+
+Analysis of spectral components at different scales can be done using a discrete wavelet transform (DWT). A DWT tiles the wavelength-scale plane by convolving a spectrum, $f( \lambda )$, with variable sized functions \citep{2012AAS...22033004S}. These functions are called daughter wavelets, $\psi_{\rm a,b}(\lambda)$, which are created from a mother wavelet, $\psi(\lambda )$,  using a shift-and-scale operation,
+%
+\begin{equation}\label{daugthermother}
+\psi_{a,b}(\lambda) = \frac{1}{\sqrt{a}}\psi(\frac{\lambda - b}{a}),\quad a,b \in  \Re, a \neq 0 ,
+\end{equation}
+%
+where  $a$ is a member of the dyadic sequence,
+%
+\begin{equation}\label{dyadic}
+a_{i} = 2^{i}, \quad i = 0,1,2,3,...,n
+\end{equation}
+%
+and $b=kb_{0}$, where $k$ is an integer and $b_0$ is chosen to ensure the recovery of $f(\lambda)$. By employing a DWT, the appropriate values of $b$ are selected to minimise overlap between wavelet convolutions. Following the notation in chapter 8 of \citet{Olkkonen2011}, a discrete wavelet transform can be calculated for each dyadic scale ($i$) and displacement ($k$):
+%
+\begin{equation}\label{DWT}
+WT_{f(\lambda)}(i,k) = \frac{1}{\sqrt{2^i}} \int f(\lambda)\overline{\psi \left(\frac{\lambda - k2^ib_0}{2^i} \right)} d\lambda = f(\lambda),\psi_{i,k}(\lambda)
+.\end{equation}
+%
+The likeness of a wavelet, $\psi_{i,k}$, to a section of the spectrum is given by the wavelet coefficient $WT_{f(\lambda)}(i,k)$ from Eq. (\ref{DWT}). Performing this calculation over the series of dyadic scales and displacements yields wavelet coefficients which represent different sized structures at different wavelengths. I split coefficients into bands with constant scales, $\lbrace WT_{f(\lambda)}(0,b)\rbrace_k$, which represent the likeness of a single scale across the entire spectrum. The power of each scale, $\lbrace WT_{f(\lambda)}(i,b)\rbrace_k^2$ , can be visualised in a power H\"{o}vmoller (one value of $i$ per row) in Fig. \ref{fig:wavelet:wavelet_power}. Bands of coefficients which correspond to noise and low-order continuum artefacts (such as merged \'{e}chelle orders) can then be excluded. A filtered spectrum may be reconstructed with an inverse DWT (IDWT):
+%
+\begin{equation}\label{IDWT}
+f(\lambda) = \sum_{i=-\infty }^{\infty} 2^{\frac{-3i}{2}} \int WT_{f(\lambda)}(i,k)\hat{\psi} \left(\frac{\lambda - b}{2^i} \right)db
+,\end{equation}
+%
+where
+%
+\begin{equation}
+\hat{\psi} \left(\frac{\lambda - b}{2^i} \right) = \frac{\psi \left(\frac{\lambda - b}{2^i} \right)}{\sum_{i=0}^{i=n} \left| \psi \left(\lambda - b \right) \right|^2 }
+.\end{equation}
+%
+The process of reconstructing a spectrum using a subset of wavelet coefficients is called wavelet filtering and is analogous with Fourier filtering. Alternatively, the subset of coefficients may be chosen to meet a threshold criteria (i.e. $\left[ WT_{f(\lambda)}(i,k) \right]^2  \geq \rm 0.01$) which eliminates information that has little contribution to a signal; this is called wavelet compression.
+
+I do not require Eq. (\ref{IDWT}) to determine atmospheric parameters as I perform a $\chi^2$ fit using a subset of coefficients from Eq. (\ref{DWT}) to those from a grid of models (see Sect. \ref{wavelet:Method}). I also do not apply any threshold criterion. The nominal resolving power of the CORALIE spectrograph is R=55\,000, so at least $2^{16}$ values are required to sample a spectrum over the wavelength range 450-650nm.  I decided to use $2^{17}$ values for the wavelet decomposition to ensure no loss of information and to give us more choice in the number of wavelet bands used in my analysis. I used Eq. (\ref{DWT}) to obtain wavelet coefficients which have information on scales in the range 0.003\,nm--200\,nm. My wavelet method only uses a subset of $i$ values. To select these, I constructed power H\"{o}vmoller diagrams (similar to Fig. 1) for a variety of regions between 450\,nm and 650\,nm, for different co-added spectra in my sample. I found that power associated with line absorption lies in the range 0.04--4\,nm, with larger scales typically corresponding to systematic trends and shorter scales with noise. This corresponds to values of i=4--12 (0.048--3.125\,nm).  The application of Eq. (\ref{IDWT}) to the two subsets of coefficients (4--12 and 13--17) is shown in Fig. \ref{filt:a}.  I found that the subset range $i=4-12$ is too restrictive  to reproduce short-scale information (e.g. weak lines) and so I decide to extend this range to $i=4-14$ (0.012--3.125\, nm; Fig. \ref{filt:b}) which better represents the boundary between noise and weak lines. I do not show the reconstruction of subset $i=0-3$ in Fig. \ref{filt:a} and \ref{filt:b} as using only 16 coefficients to reconstruct a spectrum leads to a large Daubechies-4 wavelet with some sub-structure.  
+
+
+I demonstrate the sensitivity of wavelet coefficients to atmospheric parameters in Fig. \ref{fig:wavelet:wavelet_power} for wavelet coefficients in the range $i=11-12$ ($0.04\,-\,0.09\, \rm nm$). I see a slow variation of some wavelet coefficients which corresponds to changes in individual spectral line geometries as each parameter changes.  One thing to note is the sensitivity of each parameter; $T_{\rm eff}$ varies the most, followed by $V \sin i$ and [Fe/H]. Surface gravity is the least varying parameter in wavelet space and is dominated by a few lines sensitive to $\log g$. As $V \sin i$ increases, I see positive and negative structures form and become stronger at higher $V \sin i$ values. This is likely to be a continuum effect as weaker lines are smeared out to average a lower continuum whilst stronger lines persist.
+
+The choice of mother wavelet depends on the objective of the work.  A Daubechies wavelet performs well for frequency identification and is widely used in signal processing and data compression \citep{2002A26A...386.1143B}. A Haar wavelet, with a more step-like structure, is more suited to identifying discontinuity and is widely used in computer-vision projects (e.g. \citealt{2009arXiv0911.0399E}). I investigate the effects of wavelet choice on the determined atmospheric parameters in Sect. \ref{wavelet:fe_offset}, but proceed with the Daubechies ($k$=4) wavelet for the rest of this work. 
+
+
+\section{Bayesian measurements} \label{wavelet:Method}
+
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[scale=1]{5-images/FEH_FGK_stars.eps}
+\caption{Histogram of 14,681 [Fe/H] measurements for  stars from Gaia-ESO data release 3 \protect\citep{2014A&A...570A.122S}. Plotted is the median value of [Fe/H] (solid blue), with $1 \sigma$ from the median (dashed blue). The grid range used in enclosed by the dashed green lines.}
+\label{wavelet:fig:FE_H}
+\end{figure}
+
+I use the Markov chain Monte Carlo method to determine the posterior probability distribution for $T_{\rm eff}$, $\log g$, $V \sin i$ and [Fe/H] given an observed spectrum. My method is a global $\chi^2$ fitting routine which compares subsets of wavelet coefficients ($i=4-14$) to those from a pre-synthesised grid of spectra. My grid was synthesised with the radiative transfer code SPECTRUM \citep{1994AJ....107..742G} using MARCS model atmospheres \citep{2008A&A...486..951G}, and version 5 of the GES (GAIA ESO survey)  atomic line list provided within iSpec \citep{2016csss.confE..22B} with solar abundances from \cite{2009ARA&A..47..481A}. I computed models spanning 450nm--650nm over a temperature range of 4000 to 8000\,K in steps of 250K, $-$1 to +1\,dex in steps of 0.5 dex for [Fe/H] and 3.5 to 5\,dex in steps of 0.5 for $\log g$. I selected the range of [Fe/H] by looking at composition measurements of over 14,000 FGK stars from Gaia-ESO survey data release 3 (Fig. \ref{wavelet:fig:FE_H}; \citealt{2014A&A...570A.122S}). I found that 96\% of stars with measurements of composition had [Fe/H] in the range $-$1 to 1\,dex. This range in [Fe/H] is also much larger than the full  range in [Fe/H] for the benchmark sample described in Sect. \ref{wavelet:wavelet_benchmark}. 
+
+
+Spectra in the grid are calculated with zero instrumental, rotational, or macroturbulence broadening. These are accounted for in post-processing by convolving the grid spectra with the appropriate kernels. In this work, I allow $V \sin i$ to have values in the range $0$ - $50 \, \rm kms^{-1}$. The upper limit of $50\,kms^{-1}$ would need to be extended for hotter stars beyond the Kraft break, but is suitable for this work on late-type stars. Macroturbulence are estimated using Eq. (5.10) from \citet{Doyle2015} and microturbulence was accounted for at the synthesis stage using Eq. (3.1) from the same source. Spectra in-between grid points are extracted by trilinear interpolation, broadened to the desired value of $V \sin i$ and macroturbulence, and then convolved with a Gaussian to account for  instrumental broadening. For the self-consistency tests in Sect. \ref{wavelet:self_con} instrumental broadening was ignored, but for the CORALIE spectra in Sect. \ref{wavelet:wavelet_benchmark} I used an instrumental resolving power $R = 55,000$ \citep{2001Msngr.105....1Q,Doyle2015}. I then re-sample between 450\,and 650\,nm with 2$^{17}$ values (the same as the observed spectrum) and apply Eq. (\ref{DWT}) to obtain the wavelet coefficients $WT_{f(\lambda)}(4-14,k)$ for the model spectra. 
+
+The subset of wavelet coefficients from the interpolated model, $WT_{\textbf{m}}$, are compared to those from the data, $WT_{\textbf{d}}$, in the following Bayesian framework: the probability of observing a spectrum for a given model is given by $\rm p(\textbf{m}|\textbf{d})\propto \mathcal{L}(\textbf{d}|\textbf{m}) \rm p(\textbf{m})$. The vector of model parameters  is given by $\rm \textbf{m} = \left( \rm T_{\rm eff}, \rm [Fe/H], \log g, \rm V \sin i \right)$ and I assume uniform prior probability for the model parameters within the grid range. I use the likelihood function $\mathcal{L}(\textbf{d}|\textbf{m}) = \exp (-\chi^2/2)$ where
+
+\begin{equation}\label{chi_squared}
+\chi^{2} = \frac{(WT_{\textbf{d}} - WT_{\textbf{m}})^{2}}{\sigma_{WT_{\textbf{d}}}^2}
+,\end{equation}
+and 
+
+\begin{equation}\label{sigma}
+\sigma_{WT_{\textbf{d}}}^2 = \beta \sigma_{MC}^{2}.
+\end{equation}
+The term $\sigma_{MC}^{2}$ was calculated by generating 1000 spectra from the co-added spectrum with noise generated from a standard normal distribution centred around $f(\lambda)$ and with $\sigma$ equal to the standard deviation of the spectrum, $\sigma_{f(\lambda)}$ (calculated from the standard deviation in co-added spectra). The blaze function is corrected prior to co-addition of the spectra and so deviations in blaze functions will result in uncertainties propagating through to $\sigma_{f(\lambda)}$, and $\sigma_{MC}^{2}$, effectively down-weighting regions with poor blaze corrections.  The free parameter $\beta$ has been introduced to account for additional noise, incomplete atomic data, deviations from solar metallicity scaling, lines which form under non-local thermodynamic equilibrium, and other unaccounted errors. In principle, I could have used stellar models or empirical relations to set priors on these atmospheric parameters but decided not to do this for two reasons. Firstly, allowing the MCMC sampler to explore regions with a-priori low probability gives a better indication of the reliability of my method than using a more constrained solution. Secondly, by imposing a prior from stellar models or empirical relations based on normal stars we may fail to identify interesting examples of anomalous stars in my sample, for example, helium-rich stars. 
+I sample the model parameter space using the Markov chain Monte Carlo method, implemented by the python package {\sc{emcee}} \citep{2013PASP..125..306F} . {\sc{emcee}} uses affine-invariant ensemble sampling (parallel stretch move algorithm; \citealt{Goodman2010}) to split Markov chains into sub-groups and update the position of a chain using the positions of chains in the other subgroups. The algorithms affine-invariance can cope with skewed probability distributions and generally has shorter autocorrelation times than a classic Metropolis-Hastings algorithm.
+
+I generate 12 Markov chains of 20,000 draws each to converge on the best atmospheric parameters. I found that the chains converged before the 5000$^{th}$ draw, but as a precaution I discarded the first 10,000 draws. I take the median values of the model parameters in the remaining draws to determine the atmospheric parameters for a spectrum. An example posterior probability distribution for WASP-20 is plotted in Fig. \ref{fig:wavelet:wavelet_corner_WASP20}. The parameter space is almost symmetric with small degeneracies between $T_{\rm eff}$, [Fe/H] and $\log g.$ I note that the precision of the parameters determined from the standard deviation of each parameter in the Markov Chain is typically an underestimate of the true precision of these parameters because it does not account for systematic errors in the data or the models.
+
+\begin{figure*}[ht!]
+\centering
+\includegraphics[width=\textwidth]{5-images/wavelet_WASP20_corner.eps}
+\caption{Posterior probability distributions for WASP-20.}
+\label{fig:wavelet:wavelet_corner_WASP20}
+\end{figure*}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Self consistency}\label{wavelet:self_con}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ \begin{figure*}
+\centering
+ \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{5-images/selfT.eps} 
+    \label{fig7:a} 
+    \vspace{4ex}
+  \end{subfigure}%% 
+  \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{5-images/selfM.eps} 
+    \label{fig7:b} 
+    \vspace{4ex}
+  \end{subfigure} 
+  \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{5-images/selfL.eps} 
+    \label{fig7:c} 
+  \end{subfigure}%%
+  \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{5-images/selfV.eps} 
+    \label{fig7:d} 
+  \end{subfigure} 
+  \caption{Differences between wavelet-determined atmospheric parameters and those used to synthesise spectra with all parameters free (black) and with priors on $\log g$ (red). }
+
+  \label{wavelet:fig:self_consistency}   
+\end{figure*}
+
+
+\begin{table}
+\caption{The recovery of atmospheric parameters using the wavelet method for two groups of 256 spectra: one group with no priors on $\log g$ and another with priors imposed from transit photometry. The difference between the value measured by the wavelet method and the input value used to interpolate the spectrum ($\rm x_{\rm out}-\rm x_{\rm in}$) were used to calculate the standard deviation, $\sigma$, and mean offset, $\mu$.}              % title of Table
+\label{wavelet:table:self_cons_tab}      % is used to refer this table in the text
+\centering                                      % used for centering table
+\begin{tabular}{l c r r c c c c c c}          % centered columns (4 columns)
+\hline\hline                        % inserts double horizontal lines
+ & \multicolumn{1}{p{2cm}}{\centering Prior on \\ $\log g$?} & $\sigma$ & $\mu$ & \\
+\hline    
+$T_{\rm eff}$ (K) & no & 46.0 & -3.2 \\
+ & yes & 3.1  &  0.2 \\
+$\rm [Fe/H]$ (dex) & no & 0.040 & -0.003 \\
+ & yes & 0.020 & -0.001\\
+$V \sin i$ (kms$^{-1}$) & no & 0.47 & 0.05 \\
+ & yes & 0.17   & -0.06 \\
+$\log g$ (dex) & no & 0.060 & -0.002\\
+ & yes & 0.020 & 0.001\\
+
+\hline                                             %inserts single line
+\end{tabular}
+\end{table}
+
+I have assessed  the ability of my method to recover atmospheric parameters from synthetic spectra in order to check that my results are self consistent. I interpolated 512 spectra with random values of $T_{\rm eff}$, [Fe/H], $\log g$ and $V \sin i$ selected within the limits of my grid of models. Each spectrum was then re-sampled to have $2^{17}$ values in the range 450--650\,nm to match my choice of coefficients in Sect. \ref{wavelet:wavelet_decomposition} and the benchmark sample in Sect. \ref{wavelet:wavelet_benchmark}. These spectra were split into two groups and analysed with the aforementioned method. The first group had $\log g$ as a free parameter to probe for any systematics, for the second group I imposed a prior on $\log g$ to simulate the effect of well constrained surface gravity measurement from transit photometry. The  $\log g$ prior probability distribution was assumed to be Gaussian with a mean $\log g$ value equal to the value used to interpolate the spectrum and a dispersion equal to the average uncertainty of transit $\log g$ values from \citet{26A...558A.106M} (hereafter referred to as M13) for 44 WASP exoplanet hosts ($\overline{\sigma_{\rm \log g}}$ = 0.02 dex). I decided not to add Gaussian noise to these spectra as noise profiles depend upon stellar parameters and instrumental conditions; this is assessed  in Sect. \ref{wavelet:spec_quality}. I found typical autocorrelation lengths are below 1000 steps for all parameters in the first chain and 12 chains in the second run typically produce an acceptance fraction between $\sim\,0.25\,$ and $\,0.3$.  
+
+The recovery of atmospheric parameters for both groups is shown in Fig.  \ref{wavelet:fig:self_consistency} and summarised in Table \ref{wavelet:table:self_cons_tab}. I found that all parameters are recovered well across the range of my grid. With no constraints on $\log g$, there were only two measurements of $T_{\rm eff}$ that deviated from the input value by more than 150\,K. A prior on $\log g$ significantly decreases the difference between measured and input atmospheric parameters and shows that my method is sensitive to $\log g$. There is a small increase in residual scatter for measurements of $V \sin i$ when the interpolated value of $V \sin i$ below 0.5\,km\,s$^{-1}$; this is seen in both groups and marginally improved with a prior on $\log g$. This is expected as the resolution of the broadening kernel in combination with the edge of parameter space makes it difficult to determine low $V \sin i$ values. The internal precision associated with the wavelet method is remarkably high; by taking $1\sigma$ values from the cumulative probability distributions I found precisions around 15\,K, 0.01\,dex, 0.02\,dex, and 0.15\,$\rm km\,s^{-1}$ for $T_{\rm eff}$, [Fe/H], $\log g$, and $V \sin i$ respectively. More realistic uncertainties are determined in the following sections. 
+
+I also assessed the sensitivity of my method by determining the atmospheric parameters of 9 spectra from a discrete set of grid points with different combinations of fixed parameters. I interpolate 96 spectra from the following grid points -- $4800$ K, $5800$ K and $6500$ K for $T_{\rm eff}$; $-0.5$, $0.0$ and $0.5$ $dex$ for [Fe/H]; $3.75$, $4.40$ and $4.80$ $dex$ for $\log g$; $5$, $10$ and $15\,kms^{-1}$ for $V \sin i$. In total, I determined the atmospheric parameters  for each spectrum 15 times with the wavelet method using every combination of free and fixed parameters (see Fig. \ref{wavelet:fig:self_consistency_2}). I found that constraining one or more parameters increases the internal precision of the wavelet method significantly. A slight degeneracy exists between $T_{\rm eff}$ and $\log g$ resulting in a modest scatter when both parameters are left free. This also highlights the numerical noise introduced by starting walkers at different positions, since walkers explore parameter space by random jumps which may never reach the correct solution, despite prior knowledge that an exact solution lies somewhere within the grid. 
+
+ \begin{figure*}
+
+    \includegraphics[scale=0.7]{5-images/self_test_2_TL.eps} 
+
+    \includegraphics[scale=0.7]{5-images/self_test_2_TM.eps} 
+
+  \caption{Difference between atmospheric parameters determined by the wavelet method for 9 synthetic spectra when some parameters are fixed. I plot atmospheric parameters determined with with all parameters free ($T_{\rm eff}$, [Fe/H], $\log g$, $V \sin i$) in black; with one parameter fixed in blue; with two parameters fixed in cyan; three parameters fixed in orange.  }
+  \label{wavelet:fig:self_consistency_2}   
+\end{figure*}
+
+
+
+\section{Benchmark sample}\label{wavelet:wavelet_benchmark}
+
+
+\begin{table}[ht!]
+\caption{My benchmark sample of FGK stars from D15. I include the V magnitude, the number of spectra and the S/N of the coadded spectra at 500\,nm.}              % title of Table
+\label{WASP_STARS}      % is used to refer this table in the text
+\centering                                      % used for centering table
+\begin{tabular}{l r r r r}          % centered columns (4 columns)
+\hline\hline                        % inserts double horizontal lines
+ Star & V mag & \multicolumn{1}{p{2cm}}{\centering \# of \\ spectra} & \multicolumn{1}{p{2cm}}{\centering SNR\\ ($\sim$500 nm)} \\
+\hline    
+WASP-4  & 12.50 & 12 & 37 \\
+WASP-5  & 12.30 & 11 & 35 \\
+WASP-6  & 11.90 & 30 & 63 \\
+WASP-7  &  9.50 & 13 & 124 \\
+WASP-8  &  9.79 & 21 & 137 \\
+WASP-15 & 11.00 & 15 & 83\\
+WASP-16 & 11.30 & 19 & 77\\
+WASP-17 & 11.60 & 42 & 71\\
+WASP-18 &  9.30 &  5 & 119 \\
+WASP-19 & 12.59 & 28 & 50\\
+WASP-20 & 10.68 & 58 & 153 \\
+WASP-22 & 12.00 & 29 & 63\\
+WASP-23 & 12.68 & 38 & 53\\
+WASP-24 & 11.31 & 18 & 53\\
+WASP-29 & 11.30 & 14 & 57\\
+WASP-30 & 11.90 & 47 & 27\\
+WASP-31 & 11.70 & 35 & 53\\
+WASP-53 & 12.19  & 35 & 40\\
+WASP-69 &  9.88 & 21 & 136 \\
+WASP-80 & 11.90 & 37 & 51\\
+\hline                                             %inserts single line
+\end{tabular}
+\end{table}
+
+
+
+Any spectral analysis technique must be tested against stars with high-quality measurements. For this  I use stars from  \citet{Doyle2013} and (\citealt{Doyle2015}; D15, hereafter). The D15 sample consists of 24 stars analysed by measurements of EW and spectral fitting of high-S/N and high-resolution ($\rm R\,=\,112,000$) data from the HARPS spectrograph \citep{2001Msngr.105....1Q}. I used lower-quality observations from the CORALIE spectrograph to determine $T_{\rm eff}$, [Fe/H], $\log g$ and $V \sin i$ of the same stars with the wavelet method. Only 22 stars in the D15 sample have CORALIE spectra available to use and I further exclude WASP-77A and the close (3") B-component as both component as they are un-resolved in the CORALIE fibre. This leaves a sample of 20 stars for use to calibrate my method (see Table \ref{WASP_STARS}).
+
+
+
+\section{CORALIE spectra}\label{CORALIE_data}
+
+Each spectrum was processed with the CORALIE standard data-reduction pipeline \citep{26AS..119..373B}. The radial velocity shift was measured relative to a solar template\footnote{From The Gaia Benchmark Stars Library pipeline which is the result of co-adding asteroid observations by NARVAL.} and corrected into a laboratory frame of reference. The spectra were then median-combined onto an identically sampled wavelength grid. Continuum regions were identified by applying maximum and median filters  \citep{Blanco-Cuaresma2017} and fitted with spline functions (1 every 10\,nm) for normalisation. The wavelet method was then applied to each spectrum twice: once with no priors on $\log g$ and a second time with priors given by transit photometry. The priors on $\log g$ were set to those from M13 if quoted, or the relevant discovery papers otherwise (see Table \ref{wavelet:table:doyle_tab}).  
+
+
+
+
+\section{Results}\label{D15_results}
+
+ \begin{figure*}
+\centering
+ \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{5-images/doyleT} 
+    \caption{} 
+    \label{doyle:a} 
+    \vspace{4ex}
+  \end{subfigure}%% 
+  \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{5-images/doyleM} 
+    \caption{} 
+    \label{doyle:b} 
+    \vspace{4ex}
+  \end{subfigure} 
+  \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{5-images/doyleL} 
+    \caption{} 
+    \label{doyle:c} 
+  \end{subfigure}%%
+  \begin{subfigure}[b]{0.5\linewidth}
+    \centering
+   \includegraphics[width=\linewidth]{5-images/doyleV} 
+    \caption{} 
+    \label{doyle:d} 
+  \end{subfigure} 
+  \caption{Difference between wavelet analysis and D15 (O-C) for each atmospheric parameter in the D15 sample. Each spectrum was measured twice, once with $\log g$ as a free parameter (black) and again with $\log g$ priors imposed from transit photometry (red).  I exclude measurements of $V \sin i$ where macroturbulence, $\xi_t$, was set to $0\,\rm km\,s^{-1}$ to ensure models a best model was converged upon.}
+  \label{wavelet:fig:doyle}   
+\end{figure*}
+
+
+
+\begin{table}
+\caption{Recovery of atmospheric parameters for 20 FGK stars from D15: one group with no priors on $\log g$ and another with priors from transit photometry. The difference between the value measured by the wavelet method and D15 ($x_{wavelet}-x_{D15}$) are used to calculate the mean dispertion, $\sigma$, and mean offset $\mu$.}              % title of Table
+\label{wavelet:table:doyle_tab}      % is used to refer this table in the text
+\centering                                      % used for centering table
+\begin{tabular}{l l r r c c }          % centered columns (4 columns)
+\hline\hline                        % inserts double horizontal lines
+ & \multicolumn{1}{p{2cm}}{\centering Prior on \\ $\log g$?} & $\sigma$ & $\mu$ & \\
+\hline    
+$T_{\rm eff}$ (K) & no & 85.00 &  31.00 \\
+ & yes & 86.00  &  14.00 \\
+$\rm [Fe/H]$ (dex) & no & 0.06 & $-$ 0.15 \\
+ & yes & 0.10 & $-$ 0.18 \\
+$V \sin i$ (kms$^{-1}$) & no & 1.35  & $-$ 0.79 \\
+ & yes & 0.62 &  $-$ 1.33 \\
+$\log g$ (dex) & no & 0.13 & 0.08 \\
+ & yes & 0.14 &  0.05 \\\\\hline                                             %inserts single line
+\end{tabular}
+\tablefoot{Values of $\sigma$ and $\mu$ for $V \sin i$ excluded stars where macroturbulence, $\xi_t$, was set to $\rm 0\, \rm km\,s^{-1}$.}
+\end{table}
+
+
+% Include the main table of results
+\input{5-Wavelet_analysis/Table}
+
+The results can be seen in Fig. \ref{wavelet:fig:doyle} and are summarised in Tables \ref{wavelet:table:doyle_tab} and \ref{wavelet:table:waspstars}. My method determines $T_{\rm eff}$ to within 220\,K of the value found by D15. My measurements of [Fe/H] are systematically offset by approximately\,$-$\,0.18\,dex from those of D15; this is discussed further in Sect. \ref{wavelet:fe_offset}. It is difficult to constrain $\log g$ spectroscopically and my measurements often differ from those of D15 by up to 0.5 dex. My measurements of $V \sin i$ converge to 0\,km\,s$^{-1}$ for seven stars in the sample due to an over estimation of $v_{mac}$ or instrumental resolution. To mitigate this problem I repeated the analysis with $v_{mac}$ = 0\,km\,s$^{-1}$. This allowed these stars to converge on best fitting models without pushing against the edge of parameter space. These stars are marked with an asterisk in Table \ref{wavelet:table:waspstars}. 
+
+I found no benefit by using priors on $\log g$. In most cases the use of $\log\,g$ priors increases the standard deviation in differences between atmospheric parameters from my method and published values. I investigated the level of agreement between spectroscopic values of $\log g$ from EW measurements (D15), $\log g$ from the wavelet method and those from transit photometry. Photometric surface gravity is typically measured to better precision than its spectroscopic counterpart, but relies on stellar models and correct limb-darkening parameters which in-turn rely on a constrained effective temperature, composition, and surface gravity. Recent work suggests a disagreement between spectroscopic and photometric $\log g$ which is correlated with $T_{\rm eff}$ (see Fig. 4 from \citet{Doyle2017}). I compare the difference between spectroscopic and photometric $\log g$ measurements in Fig. \ref{wavelet:fig:mortlogg}. I found a statistically significant negative correlation (p-value $\leq$ 10$^{-5}$) between $\Delta \log g$ ($\log g_{\rm photometry} - \log g_{\rm wavelet}$ ) with $T_{\rm eff}$ from my method. The origin of this is unclear, but a similar trend is seen between spectroscopic and asteroseismic measurements (Fig. 6 of \citet{Mortier2014}) which suggests to us that this is a problem to spectral analysis of late-type stars using plane-parallel non-LTE model atmospheres. For a few stars, I relaxed the $\log g$ prior to have a standard deviation of $0.2$ dex (instead of $0.02$ dex) and found almost no difference between these solutions and those with a uniform prior on $\log g$.  
+
+
+  \begin{figure}[ht!]
+\centering
+\includegraphics[width=\textwidth]{5-images/mortlogg}
+\caption{The difference between spectroscopic $\log g$ and photometric $\log g$ ($\log g_{ph}$ - $\log g_{sp}$) correlated with $\rm T_{\rm eff, \rm wavelet}$ from this work (black) and from D15 (red).}
+\label{wavelet:fig:mortlogg}
+\end{figure}
+
+  \begin{figure*}[ht!]
+\centering
+\includegraphics[width=\textwidth, height = 0.4\textwidth]{5-images/WASP20-halpha.eps}
+\caption{The H-$\alpha$ region for WASP-20 (black) fitted with the best fitted model from D15 (red) and the best model from this work (blue). The near horizontal lines at flux ~ 1.2 are the residuals between the D15 model (red) or wavelet model (blue) and the spectrum of WASP-20.}
+\label{wavelet:fig:WASP-20Halpha}
+\end{figure*}
+
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=\textwidth]{5-images/Felines}
+\caption{Fe lines for WASP-20 alongside the best fitting model from D15 (red) and that from this work (blue). I enlarge one of the cores of an Fe line to highlight that the D15 line-depths are a better match than those found by the wavelet method. }
+\label{wavelet:fig:FElines}
+\end{figure}
+
+
+In Fig. \ref{wavelet:fig:WASP-20Halpha} I assessed the  H$\alpha$ region for the model predicted from D15 and this work for the highest-quality spectrum in my sample, WASP-20, with S/N $= 150$. The results from D15 were obtained using a custom line list, whereas I use version 5 of the GES atomic line list provided with iSpec to synthesise the D15 model of WASP-20 using atmospheric parameters, $\nu_{\rm mac}$ and $\nu_{mic}$ from D15. I found both models agree well with the data, with the left wing fitting best and a underestimation in the right wing. The discrepancies between the two wings of the  H$\alpha$ line seen here are the result of the difficulty in calibrating the blaze function in this region of the spectrum.  I found that the majority of Fe line depths are under-predicted with the wavelet method, with the D15 model better matching individual line profiles. This test demonstrates the need to benchmark against well studied stars and visually inspect the best models against the data.
+
+
+\subsection{Systematic offset in [Fe/H]}\label{wavelet:fe_offset}
+
+\begin{table}
+\caption{The performance of the wavelet method using different mother wavelets. Each analysis was performed on WASP-7 using the same method used in Sect. \ref{wavelet:wavelet_benchmark}. }              % title of Table
+\label{wavelet:table:wavelet_tab}      % is used to refer this table in the text
+\centering                                      % used for centering table
+\begin{tabular}{l r r r r c c c c c}          % centered columns (4 columns)
+\hline\hline                        % inserts double horizontal lines
+Wavelet
+& \multicolumn{1}{p{1cm}}{\centering $T_{\rm eff}$  \\ (K)}
+& \multicolumn{1}{p{1cm}}{\centering [Fe/H]  \\ ($dex$)}
+& \multicolumn{1}{p{1cm}}{\centering $\log g$ \\ ($dex$)}
+& \multicolumn{1}{p{1cm}}{\centering $V \sin i$  \\ (km\,s$^{-1}$)} \\
+\hline
+Daubechies k=4 & 5983 & 0.11 & 4.50 & 17.54\\
+Daubechies k=20 & 5975 & 0.11 & 4.36 & 17.55 \\
+Harr k=2  & 5962 & 0.11 & 4.34 & 17.52\\
+bspline k=20 & 5961 & 0.10 & 4.36 & 17.77\\
+\hline                                             %inserts single line
+\end{tabular}
+\end{table}
+
+
+\begin{table}
+\caption{The regional performance of the wavelet method on WASP-20 using a variety of wavelength ranges. No priors for $\log g$ were used.}              % title of Table
+\label{regional_tab}      % is used to refer this table in the text
+\centering                                      % used for centering table
+\begin{tabular}{l r r r r c c c c c}          % centered columns (4 columns)
+\hline\hline                        % inserts double horizontal lines
+Range 
+& \multicolumn{1}{p{1cm}}{\centering $T_{\rm eff}$  \\ (K)}
+& \multicolumn{1}{p{1cm}}{\centering [Fe/H]  \\ ($dex$)}
+& \multicolumn{1}{p{1cm}}{\centering $\log g$ \\ ($dex$)}
+& \multicolumn{1}{p{1cm}}{\centering $V \sin i$  \\ (km\,s$^{-1}$)} \\
+
+\hline
+450\,--\,500\,nm & 5984 & $-$\,0.17 & 4.31 & 3.98  \\
+500\,--\,550\,nm & 6076 & $-$\,0.06 & 4.33 & 3.76 \\
+550\,--\,600\,nm & 5530 & $-$\,0.34 & 4.00 & 3.60  \\
+600\,--\,650\,nm & 6099 & $-$\,0.12 & 4.96 & 3.45\\
+400\,--\,600\,nm & 5983 & $-$\,0.11 & 4.50 & 3.63\\
+D15 & 6030 & 0.13 & 4.23 & 4.30 \\
+ 
+\hline                                             %inserts single line
+\end{tabular}
+\tablefoot{50nm windows had 2$^{15}$ samples and the 200nm windows had 2$^{17}$ samples. All were subject to the same analysis in Sect. \ref{wavelet:wavelet_benchmark} with no priors on $\log g$.}
+\end{table}
+
+
+There are many reasons why my method may produce composition offsets when compared with other established techniques. The interested reader should see \cite{26A...601A..38J} for an excellent review on how the specifics of spectroscopic analysis routines affect abundance measurements. One interesting result from \cite{26A...601A..38J} is the effect of continuum normalisation which increased the method-to-method scatter in abundance measurements by up to 0.3\,dex (see their Fig.\,5). Wavelet filtering in my method is an alternate approach to normalisation, and so an offset of around 0.18\,dex is not entirely unexpected. I assessed if there is a systematically lower continuum placement by adding an free parameter, $C_0$, which is a constant to add to the normalised flux of the model spectra before a discrete wavelet transform in the calculation of log-likelihood. I found values of $C_0$ converged to values between $-0.05$ and $0.05$ and did not affect measurements of [Fe/H] by more than $0.05$\,dex; $T_{\rm eff}$ remained the same for all stars within 150\,K and $\log g$ changed by as much as 0.2\, dex. 
+
+I also looked at components unique to the wavelet method. For instance, the mother wavelet used (Daubechies, k=4) may not capture the true line depths when  convolved with a spectrum. I again measured WASP-20 with three alternative wavelets (Daubechies k=20, Harr k=2 and bspline  k=103) across the range 450\,--\,650\,nm  (see Table \ref{wavelet:table:wavelet_tab}). I found the choice of mother wavelet has little influence on the determined composition (and  all other atmospheric parameters) for WASP-20 and I found similar results for the rest of the D15 sample.  It is possible that the resolution of the finest wavelet convolution (2 pixels) is not sufficient to capture iron line depths. To assessed this, I convolved a few iron lines with the Daubechies k=4 kernel and assessed  whether line depths were under-determined. I found this not to be the case, suggesting no degradation of line depths owing to the choice in wavelets. 
+
+Finally, I consider the possibility that there may be instrumental effects at play with the CORALIE \'{e}chelle spectrograph. A discrepancy in EW measurements for WASP-69 (see Fig. 3.19 in D15) suggests this instrument is prone to scattered light \citep{Doyle2015}. This may be partly responsible for the systematic error in the iron abundance when combined with a low-quality spectrum. 
+
+The zero-point of the metalicity scale is a subject of on-going debate (e.g. \citealt{Kraft2004}). However, I can conclude that models using parameters found by D15 (as generated with line lists and atmospheres used in the above work) have better-fitting line depths for the majority of Fe lines in the D15 sample than my predicted models. For this reason, I apply the following correction for the [Fe/H] values of EBLM systems measured with the wavelet method to make them consistent with the metallicity scale of D15:
+\begin{equation}\label{composition_correction}
+\rm [Fe/H]_{\rm corrected} = \rm [Fe/H]_{\rm measured} + 0.18.
+\end{equation}  
+
+
+
+\subsection{Systematic trend in $\log g$}
+
+I also observe a negative correlation between residual $\log g$ measurements (wavelet - D15) and $\log g$ measured with the wavelet method (Fig. \ref{doyle:c}). This trend is observed with and without Gaussian priors on $\log g$ from transit photometry. I calculate a Pearson correlation coefficient of -0.501 for measurements with no $\log g$ prior, suggesting a significant negative correlation. I fit this trend with a first-order polynomial and found a gradient of $-0.692$ and a y-intercept of $3.067$. This correlation evaluates to zero at a wavelet $\log g$ value of 4.44. In principle, the following correction can be used to bring my $\log g$ measurements into line with those from D15,
+
+\begin{equation}\label{logg_corr}
+\log g_{\rm corrected} = \log g_{\rm wavelet} - 3.067 + 0.692\times \log g_{\rm wavelet}.
+\end{equation}
+Without knowing the exact cause of this trend, and given the sensitivity of my $\log g$ estimates to the continuum placement,  I am reluctant to advise applying this correction and conclude that the wavelet method cannot reliably estimate $\log g$ beyond confirming a dwarf-like surface gravity. Obtaining $\log g$ from a spectrum is typically done through ionization balance (balancing the iron abundance measured from the Fe
+I and Fe II lines). It is also possible to measure  $\log g$  by fitting the wings of gravity sensitive lines (e.g. Mg, Na) using model spectra (the synthesis method). This is essentially how the wavelet method operates (in wavelet space rather than normalised flux space). Accurate determinations of log g from the synthesis method requires detailed element-abundance measurements for gravity-sensitive Na and Mg lines. Estimating the abundances of these elements by scaling from the solar abundance values and applying some correction for $\alpha$ element enhancement will lead to a systematic error in $\log g $ that is difficult to quantify in individual cases. To investigate this further requires another set of comparison stars with independent $\log g$ values (preferably from binary systems where $\log g$ can be accurately measured and not planet transiting systems). 
+
+
+
+\subsection{\textbf{Precision of atmospheric parameters}}\label{precision_w}
+
+The high precision of the parameters in Table~\ref{wavelet:table:waspstars} shows that the wavelet method can reliably converge to a well-determined set of atmospheric parameters, but to make use of these parameters I also require a reliable estimate of their true precision that accounts for additional uncertainties due to systematic errors in the data and the models. To obtain a realistic estimate of true precision of the parameters from the wavelet method, $\sigma_{\rm wavelet}$, I compare the results from my method with the correction to [Fe/H] described earlier to those from D15. The standard deviation of the residuals between the measured atmospheric parameters made by D15 and from the wavelet method, $\sigma_{\rm D15 - \rm wavelet}$, is a combination of the uncertainties from methods added in quadrature:
+\begin{equation}
+\sigma_{\rm D15 - \rm wavelet}^2 = \sigma_{\rm D15}^2 + \sigma_{\rm wavelet}^2,
+\end{equation}
+where $\sigma_{\rm D15}$ is the quoted error on the atmospheric parameters from D15. There are two extreme cases: the first is that the uncertainty from D15 is negligible (or at least much better than what I can achieve) giving $\sigma_{\rm D15 - \rm wavelet}^2 \approx \sigma_{\rm wavelet}^2$; and the second is that the inter-method discrepancy, $\sigma_{\rm D15 - \rm wavelet}^2$, is negligible leaving uncertainties similar to those quoted by D15. In reality, the absolute uncertainty for the wavelet method is somewhere between these two extremes. I adopt a true precision of each parameter from Table \ref{wavelet:table:doyle_tab} using a uniform prior on $\log g$ which is to assume that $\sigma_{D15} \langle \langle \sigma_{wavelet}$. I suggest applying a correction of $+0.18\,dex$ to [Fe/H] and not to apply a correction to $\log g$. This means precision of $85\, \rm K$ for $T_{\rm eff}$, $0.06\, dex$ for [Fe/H] and $1.35\,kms^{-1}$ for $V \sin i$. The resulting value of $\log g$ is not likely to be reliable but is good enough to confirm dwarf-like gravity around $\log g = $ 4--5 $dex$. I note that these values are comparable to other methods (e.g. \citealt{2010MNRAS.405.1907B}).
+
+
+
+\subsection{Spectrum quality}\label{wavelet:spec_quality}
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[height=15cm,width=12cm]{5-images/snr1.eps}
+\caption{Atmospheric parameters from the wavelet method, with no prior on $\log g$, compared to those from D15 ($x_{\rm D15}-x_{\rm wavelet}$) as a function of S/N.}
+\label{wavelet:fig:snr}
+\end{figure}
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=\textwidth]{5-images/precision.eps}
+\caption{Precision of the wavelet method versus S/N for $T_{\rm eff}$ (top left), [Fe/H] (top right), $\log g$ (bottom left), and $V \sin i$ (bottom right) for WASP-20. }
+\label{wavelet:fig:precision}
+\end{figure}
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=\textwidth]{5-images/accuracy.eps}
+\caption{Accuracy of the wavelet method versus S/N for $T_{\rm eff}$ (top left), [Fe/H] (top right), $\log g$ (bottom left), and $V \sin i$ (bottom right) for WASP-20 using the results from D15 as a zero-point.}
+\label{wavelet:fig:accuracy}
+\end{figure}
+
+In Fig. \ref{wavelet:fig:snr} I plot the difference between atmospheric parameters obtained with the wavelet method (with no priors for $\log g$) to those from D15 as a function of S/N. The sample falls into two categories of quality (those with S/N $\leq$ 90 and those with S/N $\geq$ 120). There is noticeably more scatter in the lower-quality group and suggests that the uncertainty of my atmospheric parameters decreases with a better-quality spectrum. The noise profile of a spectrum depends on observing conditions, properties of the star and the instrument used to make the observations. This is why adding Gaussian noise to a synthetic spectrum until the atmospheric parameters are no longer recoverable does not give a true reflection of a methods robustness to noise. Instead, I use 32 (out of 58) observations of the star with the highest S/N in the D15 sample - WASP-20. I dyadically split up these spectra and median combine them into different sets. The sets of splits used were 1 spectrum (1 set of 32 spectra), 2 spectra (2 sets of 16 spectra), 4  spectra (4 sets of 8 spectra), ..., 32 spectra (32 sets each containing just 1 spectra). I scale S/N from the coaddition of all 58 spectra:
+\begin{equation}
+\rm S/N = \rm S/N_{58 \, \rm spectra} \times \sqrt{\frac{N_{\rm set}}{58}}.
+\end{equation}
+Each set was measured with the aforementioned wavelet technique with no prior probability function for $\log g$, and best fitting parameters adopted. The precision and accuracy as a function of S/N are shown in Figs. \ref{wavelet:fig:precision} and \ref{wavelet:fig:accuracy}, respectively. I found that systematic errors dominate for a S/N below 40. A similar result is found by \citet{2014A&A...570A.122S} who measured UVES-FLAMES spectra for FGK stars from the GAIA-ESO survey and found a systematics threshold of S/N$\, \approx 50$.
+
+
+
+\section{Conclusion} \label{Conclusion}
+
+I have shown that my method accurately recovers the atmospheric parameters of synthetic spectra from a grid of models using subsets of wavelet coefficients in a Bayesian framework. The same method was applied to the CORALIE spectra of 20 FGK stars which have been analysed independently by measurements of EWs from higher-quality HARPS spectra. From this I determine a precision for the parameters derived from the wavelet method of $85\, \rm K$ for $T_{\rm eff}$, $0.06\, \rm dex$ for [Fe/H] and $1.35\,  \rm kms^{-1}$ for $V \sin i$. Surface gravity, $\log g$, can also be estimated using my method but it is difficult to assessed the precision of this parameter in individual cases. Consequently, I recommend that $\log g$ estimates from my method are only used to decide whether or not a star is a dwarf ($\log g \approx 4.5$). I found an offset in my metallicity scale compared to the results of (\citealt{Doyle2013}, \citealt{Doyle2015}) in the sense that my values of [Fe/H] are lower by 0.18 dex, despite using a consistent solar abundance, and recommend that this offset be applied as a correction to the [Fe/H] values from my method. I found my method is robust for \'{e}chelle spectra with a S/N above 40. Below this value the uncertainty in the measured atmospheric parameters increases to unusable levels. A further development of this method would include a more sophisticated weighting system for the wavelet coefficients beyond the Monte Carlo approach used here. 
+
+My method has already been used to determine the atmospheric parameters of the EBLM~J0555$-$57 \citep{vonBoetticher2017},  which hosts one of the densest main sequence stars currently known. This method is also being used to study other EBLM systems and as part of the on-going exoplanet discovery process of the  WASP survey. For both exoplanet systems and EBLM binaries, the contribution of the companion star to the optical flux is negligible (they are SB1 binaries) and so my method using models of single stars is appropriate, but it would not be suitable for cases where the companion is detectable in the spectrum (SB2 binaries).  I have used wavelet decomposition to measure the atmospheric parameters of all EBLMs presented in this work with the exception of the northern target J1847$+$39. 
+
+%We have optimised our method for the application to spectra from CORALIE, but the same method should be equally applicable to spectra with moderate S/N from other echelle spectrographs. We have implemented the wavelet method in a python module called \textit{waveletspec} which is available upon request. 
+
+
+
+
+
+
+
+

@@ -1,0 +1,152 @@
+%\documentclass[keele]{kthesis}
+\documentclass[keele,double]{kthesis}
+
+%
+% We need this package to define the bibliography title later on.
+%
+\usepackage{authordate1-4}
+\usepackage{listings}
+
+\lstset{
+  language=python,                % choose the language of the code
+  numbers=left,                   % where to put the line-numbers
+  stepnumber=1,                   % the step between two line-numbers.        
+  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  tabsize=2,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=true,         % sets if automatic breaks should only happen at whitespace
+  title=\lstname,                 % show the filename of files included with \lstinputlisting;
+}
+
+%
+% Use the \usepackage{<package name>} command here to enable extra
+% features that the standard LaTeX implementation doesn't provide.
+% For example the citation style file, extra mathematical capabilities.
+%
+
+
+
+%\usepackage{epstopdf}
+\usepackage{keele_cite}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{theorem}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\graphicspath{ {Images/} }
+\usepackage{pdfpages}
+\usepackage{txfonts}
+\usepackage{braket}
+\usepackage{subcaption}
+\captionsetup{compatibility=false}
+\usepackage{braket}
+\usepackage{rotating}
+\usepackage{pdflscape}
+\usepackage{auto-pst-pdf}
+
+%
+% Define some commonly used notations, subscripts and superscripts.
+% These will vary depending on subject.
+%
+\newcommand{\sunM}{\mbox{\,M$_\odot$}}
+\newcommand{\sunR}{\mbox{\,R$_\odot$}}
+\newcommand{\sunL}{\mbox{\,L$_\odot$}}
+\newcommand{\starM}{\mbox{\,M$_*$}}
+\newcommand{\starR}{\mbox{\,R$_*$}}
+\newcommand{\starL}{\mbox{\,L$_*$}}
+%\newcommand{\mic}{\mbox{$\,\mu$m}}
+%\newcommand{\arcsec}{\mbox{$''$}}
+%\newcommand{\arcmin}{\mbox{$'$}}
+%\newcommand{\vunit}{\mbox{\,km\,s$^{-1}$}}
+
+%
+% Setup the theorem numbering environment
+%
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{lemma}[definition]{Lemma}
+{\theorembodyfont{\upshape} \newtheorem{example}{Example}[chapter]}
+
+%
+% Biblography headings
+%
+\renewcommand{\bibtitle}{Bibliography}
+\renewcommand{\bibheadtitle}{BIBLIOGRAPHY}
+
+%
+% Some other stuff   ADS 29/06/94
+%
+\makeatletter \renewcommand\@biblabel[1]{} \makeatother
+
+%
+% New commands following the advice of Gerry Pratt (cca13@cc.keele.ac.uk)
+%
+\renewcommand{\topfraction}{0.99}
+\renewcommand{\bottomfraction}{0.99}
+\renewcommand{\textfraction}{0.01}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%
+% Define your thesis front matter here by filling in the commands.
+%
+
+\title{Fundamental properties of M-dwarfs in eclipsing binary star systems}
+\author{Samuel Gill}
+\qualifications{M.Phys. (Hons.) York}
+\degree{Doctor of Philosophy}
+\school{Department of Physics}
+\date{October 2019}
+
+\begin{document}
+
+%
+% Main section. Here I will add chapters which will be detailed in a comment above.
+%
+
+% Abstract
+%\include{1-Abstract/Abstract}
+
+% Thanks
+%\include{2-Acknowledgements/Acknowledgements}
+
+% Chapter 1. The problem with low-mass stars
+%\include{3-Introduction/Chapter1}
+
+% Chapter 4. Theory
+%\include{4-Theory/Theory}
+
+% Chapter 5. Wavelet analysis
+%\include{5-Wavelet_analysis/Wavelet}
+
+% Chapter 7. Methods
+%\include{6-Observations/Observations}
+
+% Chapter 7. Methods
+%\include{7-Methods/Methods}
+
+% Chapter 8. Results
+%\include{8-Results/Results}
+
+% Chapter 9. Discussion
+\include{9-Discussion/Discussion}
+
+% Chapter 10 - GPU astronomy
+%\include{a10-Conclusion/Conclusion}
+
+%\include{Publications/Publications}
+%\include{Appendix/Appendix}
+
+
+\bibliographystyle{keele}
+\bibliography{References/References}
+%\include{bibliography}
+
+
+\end{document}
